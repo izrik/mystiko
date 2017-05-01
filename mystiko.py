@@ -66,6 +66,11 @@ db = SQLAlchemy(app)
 app.db = db
 
 
+class Item(db.Model):
+    item_id = db.Column(db.String(38), primary_key=True)
+    content = db.Column(db.LargeBinary, nullable=False)
+
+
 @app.route("/")
 def index():
     return '', 200

@@ -22,6 +22,9 @@
 import argparse
 from os import environ
 
+__version_tuple__ = (0, 1)
+__version__ = '.'.join(str(i) for i in __version_tuple__)
+
 
 class Config(object):
     DEBUG = environ.get('MYSTIKO_DEBUG', False)
@@ -38,7 +41,7 @@ if __name__ == "__main__":
 
 
 def run():
-    print('Mystiko')
+    print('Mystiko {}'.format(__version__))
     print('  Debug: {}'.format(Config.DEBUG))
 
 

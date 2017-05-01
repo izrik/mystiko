@@ -21,9 +21,16 @@
 
 import argparse
 from os import environ
+import git
 
 __version_tuple__ = (0, 1)
 __version__ = '.'.join(str(i) for i in __version_tuple__)
+
+try:
+    __revision__ = git.Repo('.').git.describe(tags=True, dirty=True,
+                                              always=True, abbrev=40)
+except git.InvalidGitRepositoryError:
+    __revision__ = 'unknown'
 
 
 class Config(object):
@@ -42,6 +49,7 @@ if __name__ == "__main__":
 
 def run():
     print('Mystiko {}'.format(__version__))
+    print('  Revision {}'.format(__revision__))
     print('  Debug: {}'.format(Config.DEBUG))
 
 

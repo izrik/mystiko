@@ -78,6 +78,15 @@ class Item(db.Model):
         self.content = bytes(content)
 
 
+class Option(db.Model):
+    name = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.String(100), nullable=True)
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+
 @app.route("/")
 def index():
     return '', 200

@@ -54,6 +54,10 @@ if __name__ == "__main__":
                         default=Config.DB_URI)
 
     parser.add_argument('--create-db', action='store_true')
+    parser.add_argument('--set-username',
+                        help='Set the username in the db and exit. The '
+                             'username is required whenever a client POSTs '
+                             'data, as part of HTTP Basic Authentication.')
 
     args = parser.parse_args()
 
@@ -120,6 +124,16 @@ def create_db():
     db.create_all()
 
 
+def set_username(username):
+    opt = Option.query.get('username')
+    if opt is None:
+        opt = Option('username', username)
+    else:
+        opt.value = username
+    db.session.add(opt)
+    return opt
+
+
 def run():
     print('Mystiko {}'.format(__version__))
     print('  Revision {}'.format(__revision__))
@@ -131,6 +145,10 @@ def run():
     if args.create_db:
         print('Setting up the database')
         create_db()
+    elif args.set_username:
+        print('Setting the username to {}'.format(args.set_username))
+        set_username(args.set_username)
+        db.session.commit()
     else:
         app.run(debug=Config.DEBUG, port=Config.PORT,
                 use_reloader=Config.DEBUG)

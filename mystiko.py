@@ -58,6 +58,10 @@ if __name__ == "__main__":
                         help='Set the username in the db and exit. The '
                              'username is required whenever a client POSTs '
                              'data, as part of HTTP Basic Authentication.')
+    parser.add_argument('--set-password',
+                        help='Set the password in the db and exit. The '
+                             'password is required whenever a client POSTs '
+                             'data, as part of HTTP Basic Authentication.')
 
     args = parser.parse_args()
 
@@ -134,6 +138,16 @@ def set_username(username):
     return opt
 
 
+def set_password(password):
+    opt = Option.query.get('password')
+    if opt is None:
+        opt = Option('password', password)
+    else:
+        opt.value = password
+    db.session.add(opt)
+    return opt
+
+
 def run():
     print('Mystiko {}'.format(__version__))
     print('  Revision {}'.format(__revision__))
@@ -148,6 +162,10 @@ def run():
     elif args.set_username:
         print('Setting the username to {}'.format(args.set_username))
         set_username(args.set_username)
+        db.session.commit()
+    elif args.set_password:
+        print('Setting the password to {}'.format(args.set_password))
+        set_password(args.set_password)
         db.session.commit()
     else:
         app.run(debug=Config.DEBUG, port=Config.PORT,

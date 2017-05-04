@@ -23,8 +23,10 @@ import argparse
 from os import environ
 
 import git
-from flask import Flask
+from flask import Flask, make_response, request
 from flask_sqlalchemy import SQLAlchemy
+from flask_uuid import FlaskUUID
+from werkzeug.exceptions import NotFound
 
 __version_tuple__ = (0, 1)
 __version__ = '.'.join(str(i) for i in __version_tuple__)
@@ -61,6 +63,7 @@ if __name__ == "__main__":
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = Config.DB_URI
+FlaskUUID(app)
 
 db = SQLAlchemy(app)
 app.db = db
@@ -70,10 +73,38 @@ class Item(db.Model):
     item_id = db.Column(db.String(38), primary_key=True)
     content = db.Column(db.LargeBinary, nullable=False)
 
+    def __init__(self, item_id, content):
+        self.item_id = item_id
+        self.content = bytes(content)
+
 
 @app.route("/")
 def index():
     return '', 200
+
+
+@app.route("/item/<uuid:item_id>", methods=['GET'])
+def get_item(item_id):
+    id_str = str(item_id)
+    item = Item.query.get(id_str)
+    content = ''
+    if item is not None:
+        content = item.content
+    return make_response(content, 200)
+
+
+@app.route("/item/<uuid:item_id>", methods=['POST'])
+def set_item(item_id):
+    id_str = str(item_id)
+    content = request.get_data()
+    item = Item.query.get(id_str)
+    if item is None:
+        item = Item(id_str, content)
+    else:
+        item.content = content
+    db.session.add(item)
+    db.session.commit()
+    return '', 204
 
 
 def create_db():

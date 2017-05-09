@@ -21,9 +21,10 @@
 
 import argparse
 from os import environ
+from functools import wraps
 
 import git
-from flask import Flask, make_response, request
+from flask import Flask, make_response, request, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_uuid import FlaskUUID
 from werkzeug.exceptions import NotFound
@@ -95,12 +96,43 @@ class Option(db.Model):
         self.value = value
 
 
+def credentials_are_correct(username, password):
+    opt = Option.query.get('username')
+    if opt is None:
+        return False
+    if username != opt.value:
+        return False
+    opt = Option.query.get('password')
+    if opt is None:
+        return False
+    if password != opt.value:
+        return False
+    return True
+
+
+def authenticate():
+    return Response('Incorrect or missing credentials', 401,
+                    {'WWW-Authenticate': 'Basic realm="default"'})
+
+
+def auth_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not credentials_are_correct(auth.username,
+                                                   auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
+
+
 @app.route("/")
 def index():
     return '', 200
 
 
 @app.route("/item/<uuid:item_id>", methods=['GET'])
+@auth_required
 def get_item(item_id):
     id_str = str(item_id)
     item = Item.query.get(id_str)
@@ -111,6 +143,7 @@ def get_item(item_id):
 
 
 @app.route("/item/<uuid:item_id>", methods=['POST'])
+@auth_required
 def set_item(item_id):
     id_str = str(item_id)
     content = request.get_data()

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # mystiko - A host-proof web application for storing secrets.
 # Copyright (C) 2016-2017 izrik

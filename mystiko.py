@@ -21,9 +21,10 @@
 
 import argparse
 from os import environ
+from functools import wraps
 
 import git
-from flask import Flask, make_response, request
+from flask import Flask, make_response, request, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_uuid import FlaskUUID
 from werkzeug.exceptions import NotFound
@@ -54,6 +55,14 @@ if __name__ == "__main__":
                         default=Config.DB_URI)
 
     parser.add_argument('--create-db', action='store_true')
+    parser.add_argument('--set-username',
+                        help='Set the username in the db and exit. The '
+                             'username is required whenever a client POSTs '
+                             'data, as part of HTTP Basic Authentication.')
+    parser.add_argument('--set-password',
+                        help='Set the password in the db and exit. The '
+                             'password is required whenever a client POSTs '
+                             'data, as part of HTTP Basic Authentication.')
 
     args = parser.parse_args()
 
@@ -78,12 +87,52 @@ class Item(db.Model):
         self.content = bytes(content)
 
 
+class Option(db.Model):
+    name = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.String(100), nullable=True)
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+
+def credentials_are_correct(username, password):
+    opt = Option.query.get('username')
+    if opt is None:
+        return False
+    if username != opt.value:
+        return False
+    opt = Option.query.get('password')
+    if opt is None:
+        return False
+    if password != opt.value:
+        return False
+    return True
+
+
+def authenticate():
+    return Response('Incorrect or missing credentials', 401,
+                    {'WWW-Authenticate': 'Basic realm="default"'})
+
+
+def auth_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or not credentials_are_correct(auth.username,
+                                                   auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+    return decorated
+
+
 @app.route("/")
 def index():
     return '', 200
 
 
 @app.route("/item/<uuid:item_id>", methods=['GET'])
+@auth_required
 def get_item(item_id):
     id_str = str(item_id)
     item = Item.query.get(id_str)
@@ -94,6 +143,7 @@ def get_item(item_id):
 
 
 @app.route("/item/<uuid:item_id>", methods=['POST'])
+@auth_required
 def set_item(item_id):
     id_str = str(item_id)
     content = request.get_data()
@@ -111,6 +161,26 @@ def create_db():
     db.create_all()
 
 
+def set_username(username):
+    opt = Option.query.get('username')
+    if opt is None:
+        opt = Option('username', username)
+    else:
+        opt.value = username
+    db.session.add(opt)
+    return opt
+
+
+def set_password(password):
+    opt = Option.query.get('password')
+    if opt is None:
+        opt = Option('password', password)
+    else:
+        opt.value = password
+    db.session.add(opt)
+    return opt
+
+
 def run():
     print('Mystiko {}'.format(__version__))
     print('  Revision {}'.format(__revision__))
@@ -122,6 +192,14 @@ def run():
     if args.create_db:
         print('Setting up the database')
         create_db()
+    elif args.set_username:
+        print('Setting the username to {}'.format(args.set_username))
+        set_username(args.set_username)
+        db.session.commit()
+    elif args.set_password:
+        print('Setting the password to {}'.format(args.set_password))
+        set_password(args.set_password)
+        db.session.commit()
     else:
         app.run(debug=Config.DEBUG, port=Config.PORT,
                 use_reloader=Config.DEBUG)

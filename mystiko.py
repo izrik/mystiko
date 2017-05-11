@@ -97,16 +97,30 @@ class Option(db.Model):
 
 
 def credentials_are_acceptable(username, password):
-    opt = Option.query.get('username')
-    if opt is None:
+    """Check if the credentials are acceptable. This can happen one of two
+    ways: either (1) the username and password supplied by the client match
+    the stored values exactly, or (2) if either the username or password is
+    not stored in the database, just return True no matter what the client
+    supplied."""
+
+    uopt = Option.query.get('username')
+    popt = Option.query.get('password')
+
+    if uopt is None:
+        return True
+    if popt is None:
+        return True
+
+    if not uopt.value:
+        return True
+    if not popt.value:
+        return True
+
+    if username != uopt.value:
         return False
-    if username != opt.value:
+    if password != popt.value:
         return False
-    opt = Option.query.get('password')
-    if opt is None:
-        return False
-    if password != opt.value:
-        return False
+
     return True
 
 

@@ -177,6 +177,17 @@ def set_item(item_id):
     return '', 204
 
 
+@app.route('/item/<uuid:item_id>', methods=['DELETE'])
+@auth_required
+def delete_item(item_id):
+    id_str = str(item_id)
+    item = Item.query.get(id_str)
+    if item is not None:
+        db.session.delete(item)
+        db.session.commit()
+    return '', 204
+
+
 def create_db():
     db.create_all()
 

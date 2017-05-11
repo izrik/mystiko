@@ -28,8 +28,9 @@ from flask import Flask, make_response, request, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_uuid import FlaskUUID
 from werkzeug.exceptions import NotFound
+from flask_bcrypt import Bcrypt
 
-__version_tuple__ = (0, 1)
+__version_tuple__ = (0, 2)
 __version__ = '.'.join(str(i) for i in __version_tuple__)
 
 try:
@@ -76,6 +77,7 @@ FlaskUUID(app)
 
 db = SQLAlchemy(app)
 app.db = db
+bcrypt = Bcrypt(app)
 
 
 class Item(db.Model):
@@ -96,17 +98,31 @@ class Option(db.Model):
         self.value = value
 
 
-def credentials_are_correct(username, password):
-    opt = Option.query.get('username')
-    if opt is None:
+def credentials_are_acceptable(username, password):
+    """Check if the credentials are acceptable. This can happen one of two
+    ways: either (1) the username and password supplied by the client match
+    the stored values exactly, or (2) if either the username or password is
+    not stored in the database, just return True no matter what the client
+    supplied."""
+
+    uopt = Option.query.get('username')
+    popt = Option.query.get('password')
+
+    if uopt is None:
+        return True
+    if popt is None:
+        return True
+
+    if not uopt.value:
+        return True
+    if not popt.value:
+        return True
+
+    if username != uopt.value:
         return False
-    if username != opt.value:
+    if not bcrypt.check_password_hash(popt.value, password):
         return False
-    opt = Option.query.get('password')
-    if opt is None:
-        return False
-    if password != opt.value:
-        return False
+
     return True
 
 
@@ -119,8 +135,12 @@ def auth_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth or not credentials_are_correct(auth.username,
-                                                   auth.password):
+        username = None
+        password = None
+        if auth:
+            username = auth.username
+            password = auth.password
+        if not credentials_are_acceptable(username, password):
             return authenticate()
         return f(*args, **kwargs)
     return decorated
@@ -172,11 +192,12 @@ def set_username(username):
 
 
 def set_password(password):
+    hashed_password = bcrypt.generate_password_hash(password)
     opt = Option.query.get('password')
     if opt is None:
-        opt = Option('password', password)
+        opt = Option('password', hashed_password)
     else:
-        opt.value = password
+        opt.value = hashed_password
     db.session.add(opt)
     return opt
 
@@ -192,12 +213,12 @@ def run():
     if args.create_db:
         print('Setting up the database')
         create_db()
-    elif args.set_username:
-        print('Setting the username to {}'.format(args.set_username))
+    elif args.set_username is not None:
+        print('Setting the username to "{}"'.format(args.set_username))
         set_username(args.set_username)
         db.session.commit()
-    elif args.set_password:
-        print('Setting the password to {}'.format(args.set_password))
+    elif args.set_password is not None:
+        print('Setting the password to "{}"'.format(args.set_password))
         set_password(args.set_password)
         db.session.commit()
     else:

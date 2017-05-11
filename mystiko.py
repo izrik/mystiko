@@ -30,7 +30,7 @@ from flask_uuid import FlaskUUID
 from werkzeug.exceptions import NotFound
 from flask_bcrypt import Bcrypt
 
-__version_tuple__ = (0, 2)
+__version_tuple__ = (0, 3)
 __version__ = '.'.join(str(i) for i in __version_tuple__)
 
 try:
@@ -174,6 +174,17 @@ def set_item(item_id):
         item.content = content
     db.session.add(item)
     db.session.commit()
+    return '', 204
+
+
+@app.route('/item/<uuid:item_id>', methods=['DELETE'])
+@auth_required
+def delete_item(item_id):
+    id_str = str(item_id)
+    item = Item.query.get(id_str)
+    if item is not None:
+        db.session.delete(item)
+        db.session.commit()
     return '', 204
 
 

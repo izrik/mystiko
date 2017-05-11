@@ -133,8 +133,12 @@ def auth_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth or not credentials_are_acceptable(auth.username,
-                                                      auth.password):
+        username = None
+        password = None
+        if auth:
+            username = auth.username
+            password = auth.password
+        if not credentials_are_acceptable(username, password):
             return authenticate()
         return f(*args, **kwargs)
     return decorated

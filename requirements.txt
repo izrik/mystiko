@@ -3,3 +3,4 @@ Flask==0.12.1
 Flask-SQLAlchemy==2.2
 SQLAlchemy==1.1.9
 Flask-UUID==0.2
+Flask-BCrypt

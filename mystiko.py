@@ -28,6 +28,7 @@ from flask import Flask, make_response, request, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_uuid import FlaskUUID
 from werkzeug.exceptions import NotFound
+from flask_bcrypt import Bcrypt
 
 __version_tuple__ = (0, 1)
 __version__ = '.'.join(str(i) for i in __version_tuple__)
@@ -76,6 +77,7 @@ FlaskUUID(app)
 
 db = SQLAlchemy(app)
 app.db = db
+bcrypt = Bcrypt(app)
 
 
 class Item(db.Model):
@@ -118,7 +120,7 @@ def credentials_are_acceptable(username, password):
 
     if username != uopt.value:
         return False
-    if password != popt.value:
+    if not bcrypt.check_password_hash(popt.value, password):
         return False
 
     return True
@@ -190,11 +192,12 @@ def set_username(username):
 
 
 def set_password(password):
+    hashed_password = bcrypt.generate_password_hash(password)
     opt = Option.query.get('password')
     if opt is None:
-        opt = Option('password', password)
+        opt = Option('password', hashed_password)
     else:
-        opt.value = password
+        opt.value = hashed_password
     db.session.add(opt)
     return opt
 

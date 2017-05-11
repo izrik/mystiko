@@ -30,7 +30,7 @@ from flask_uuid import FlaskUUID
 from werkzeug.exceptions import NotFound
 from flask_bcrypt import Bcrypt
 
-__version_tuple__ = (0, 2)
+__version_tuple__ = (0, 3)
 __version__ = '.'.join(str(i) for i in __version_tuple__)
 
 try:

@@ -210,12 +210,12 @@ def run():
     if args.create_db:
         print('Setting up the database')
         create_db()
-    elif args.set_username:
-        print('Setting the username to {}'.format(args.set_username))
+    elif args.set_username is not None:
+        print('Setting the username to "{}"'.format(args.set_username))
         set_username(args.set_username)
         db.session.commit()
-    elif args.set_password:
-        print('Setting the password to {}'.format(args.set_password))
+    elif args.set_password is not None:
+        print('Setting the password to "{}"'.format(args.set_password))
         set_password(args.set_password)
         db.session.commit()
     else:

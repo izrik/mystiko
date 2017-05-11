@@ -96,7 +96,7 @@ class Option(db.Model):
         self.value = value
 
 
-def credentials_are_correct(username, password):
+def credentials_are_acceptable(username, password):
     opt = Option.query.get('username')
     if opt is None:
         return False
@@ -119,8 +119,8 @@ def auth_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth or not credentials_are_correct(auth.username,
-                                                   auth.password):
+        if not auth or not credentials_are_acceptable(auth.username,
+                                                      auth.password):
             return authenticate()
         return f(*args, **kwargs)
     return decorated
